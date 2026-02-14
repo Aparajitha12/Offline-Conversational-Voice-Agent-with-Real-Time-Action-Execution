@@ -1,0 +1,8 @@
+faster-whisper
+sounddevice
+numpy
+torch
+torchaudio
+sentence-transformers
+faiss-cpu
+pyinstaller

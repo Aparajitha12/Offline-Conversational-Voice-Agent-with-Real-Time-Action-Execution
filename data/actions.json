@@ -1,0 +1,11 @@
+[
+  {"intent":"open_calculator","description":"Open Calculator","examples":["open calculator","launch calc","start calculator"]},
+  {"intent":"open_notepad","description":"Open Notepad","examples":["open notepad","launch notepad"]},
+  {"intent":"open_browser","description":"Open browser","examples":["open browser","launch chrome"]},
+  {"intent":"create_file","description":"Create file","examples":["create file named report.txt","make file called notes.txt"]},
+  {"intent":"delete_file","description":"Delete file","examples":["delete file named report.txt","remove file notes.txt"]},
+  {"intent":"list_dir","description":"List directory","examples":["list files in downloads","show files in documents"]},
+  {"intent":"web_search","description":"Search web","examples":["search web for weather","google cats"]},
+  {"intent":"get_time","description":"Get time","examples":["what time is it","tell me the time"]},
+  {"intent":"help","description":"Show help","examples":["help","what can you do"]}
+]
