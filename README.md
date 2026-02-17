@@ -1,70 +1,79 @@
-Overview: 
+## Quick Start Guide
 
-  This project implements a fully offline speech-to-text system integrated with a Retrieval-Augmented Generation (RAG) based action execution pipeline.
+To run the system locally, follow the steps below:
 
-  The system captures real-time microphone input, detects speech boundaries using Voice Activity Detection (VAD), transcribes speech using Whisper (CPU optimized), retrieves the most relevant action using FAISS-based vector similarity search, and safely executes system-level commands.
+1. Clone the repository:
 
-  All models are stored locally inside the project’s `models/` directory. Internet access is required only during the first run to download model weights. After that, the system runs completely offline without relying on external cache directories such as HuggingFace or Torch Hub.
+```bash
+   git clone https://github.com/aparajitha12/offline-voice-assistant.git
+   cd offline-voice-assistant
+```
 
-Build_Windows_Executable: 
-  To create a standalone Windows executable that includes the locally stored models, use:
+2. Create a virtual environment:
 
-  pyinstaller --onefile --add-data "models;models" app\main.py
+```bash
+    python -m venv .venv
+    .\.venv\Scripts\activate
+```
 
-  The executable will be generated in:
 
-  dist/
+  3. Install dependencies:
 
-  The generated EXE runs without requiring a Python installation and includes all necessary model files for offline execution.
+```bash
+    pip install -r requirements.txt
+```
+    
+  4. Run the application:
 
-Model_Download_Instructions: 
-  The following models are automatically downloaded on first run and stored inside the local `models/` directory:
+```bash
+     python -m app.main
+```
 
-  - Whisper tiny (via faster-whisper)
-  - Silero VAD (loaded locally from silero_vad.jit)
-  - SentenceTransformer all-MiniLM-L6-v2
+  On first execution, the required models will be downloaded and stored inside the local `models/` directory. After this initial setup, the system runs fully offline.
 
-  Internet is required only for the first run.
+  ## Configuration Options
 
-  After the models are downloaded, the system runs fully offline.
+  System behavior can be adjusted through parameters defined in `app/config.py`.
 
-  Models are stored in:
+  The most relevant configurable parameters include:
 
-  models/
+  - SAMPLE_RATE: Audio sampling rate used for microphone input.
+  - SILENCE_END_SEC: Duration of silence required to mark the end of a speech segment. Lower values reduce latency but may cut speech early.
+  - CONFIDENCE_THRESHOLD: Minimum similarity score required for an intent to be executed. Commands below this threshold are rejected for safety.
+  - TOP_K: Number of candidate intents retrieved from FAISS during similarity search.
+  - Whisper beam_size: Currently set to 1 for greedy decoding to minimize latency.
 
-Performance_Benchmarks: 
-  Test Environment:
+  These parameters allow balancing latency, responsiveness, and execution safety without modifying core logic.
 
-  Windows 11  
-  CPU-only execution  
-  Whisper tiny (int8 quantized)  
-  Greedy decoding (beam_size = 1)
+  ## Architecture Overview
 
-  Average Latency:
+  The system follows a streaming architecture optimized for CPU-only offline execution.
 
-  For short commands (approximately 1–1.5 seconds of speech):
+  Speech-to-Text (STT):
+  The system uses faster-whisper with the Whisper Tiny model, running on CPU with int8 quantization and beam_size set to 1. Whisper Tiny was selected because it provides a strong trade-off between accuracy and speed for short command-based interactions. Int8 quantization significantly reduces memory usage and inference time while maintaining acceptable transcription quality for command recognition.
 
-  STT: 400–700 ms  
-  RAG Retrieval: < 20 ms  
-  Execution: < 15 ms  
-  Total: 450–750 ms  
+  Voice Activity Detection (VAD):
+  Silero VAD is used in streaming mode with fixed 512-sample chunks at 16kHz. This ensures speech detection operates in near real-time (32ms frames). By filtering out silence and background noise before transcription, unnecessary STT processing is avoided, directly reducing end-to-end latency.
 
-  For longer utterances (around 2 seconds of speech):
+  Retrieval-Augmented Action Execution (RAG):
+  Transcribed text is converted into 384-dimensional embeddings using the all-MiniLM-L6-v2 SentenceTransformer model. These normalized embeddings are indexed using FAISS (IndexFlatIP) for cosine similarity search. Because the number of supported actions is small (10-50 intents), exact in-memory search is both efficient and sufficiently fast.
 
-  STT: ~900–1000 ms  
-  Total: ~950–1100 ms  
+  Intent Parsing and Safety:
+  Retrieved intents are validated using a confidence threshold. Commands below the threshold are rejected, preventing unintended execution. Only predefined intents from `data/actions.json` can be executed.
 
-  Latency increases proportionally with utterance duration since Whisper processes the entire detected speech segment. Retrieval and execution remain consistently fast.
+  Latency Optimization Strategy:
+  Several optimizations were applied to achieve low latency:
+  - Greedy decoding (beam_size = 1)
+  - Int8 quantized Whisper model
+  - 512-sample streaming VAD
+  - Silence threshold tuning to reduce buffering delay
+  - Precomputed and cached action embeddings
+  - In-memory FAISS index
 
-System_Requirements: 
-  Windows 10/11  
-  Python 3.10+  
-  Microphone  
-  CPU (GPU not required)  
+  The result is a system that typically achieves sub-second end-to-end latency for short commands while running entirely on CPU.
 
-  No internet connection is required after the initial model download.
 
-  Demo video: 
+  ## Demo video: 
 
   A full system demonstration is available at the link below:
   https://drive.google.com/file/d/1O3Smnas8x87pAfEsTQvbQKyZn5RrVRCj/view?usp=sharing
