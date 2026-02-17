@@ -1,5 +1,5 @@
+models/
+assistant.log
 .venv/
 __pycache__/
-*.log
-dist/
-build/
+*.pyc
