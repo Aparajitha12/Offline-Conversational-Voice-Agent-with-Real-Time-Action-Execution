@@ -23,11 +23,20 @@ def get_models_path():
 class ActionRAG:
     def __init__(self):
         model_dir = get_models_path()
+        embed_model_path = os.path.join(model_dir, "all-MiniLM-L6-v2")
 
-        # Load embedding model into /models
+        if not os.path.isdir(embed_model_path):
+            raise FileNotFoundError(
+                f"Embedding model not found at {embed_model_path}.\n"
+                "Download it once with internet ON and store inside models/."
+            )
+
+        # Load ONLY from local folder — no HuggingFace lookup
         self.embedder = SentenceTransformer(
-            "sentence-transformers/all-MiniLM-L6-v2",
-            cache_folder=model_dir
+            embed_model_path,
+            device="cpu",
+            model_kwargs={"local_files_only": True},
+            tokenizer_kwargs={"local_files_only": True},
         )
 
         # Load action definitions
@@ -37,13 +46,11 @@ class ActionRAG:
         self.texts = []
         self.mapping = []
 
-        # Collect example phrases for embedding
         for idx, action in enumerate(self.actions):
             for ex in action["examples"]:
                 self.texts.append(ex)
                 self.mapping.append(idx)
 
-        # Precompute embeddings
         embeddings = self.embedder.encode(
             self.texts,
             normalize_embeddings=True
@@ -51,15 +58,11 @@ class ActionRAG:
 
         embeddings = np.array(embeddings, dtype=np.float32)
 
-        # Build FAISS index (cosine similarity via inner product)
         dim = embeddings.shape[1]
         self.index = faiss.IndexFlatIP(dim)
         self.index.add(embeddings)
 
     def retrieve(self, query):
-        """
-        Returns top-K matching intents with similarity scores.
-        """
         q_embedding = self.embedder.encode(
             [query],
             normalize_embeddings=True
